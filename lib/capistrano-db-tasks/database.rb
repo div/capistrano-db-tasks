@@ -32,6 +32,10 @@ module Database
     def output_file
       @output_file ||= "db/#{database}_#{current_time}.sql.bz2"
     end
+    
+    def pg_pass
+      Capistrano::CLI.password_prompt "PostgreSQL Password: "
+    end
 
 
   private
@@ -78,7 +82,13 @@ module Database
     def load(file, cleanup)
       unzip_file = File.join(File.dirname(file), File.basename(file, '.bz2'))
       # @cap.run "cd #{@cap.current_path} && bunzip2 -f #{file} && RAILS_ENV=#{@cap.rails_env} bundle exec rake db:drop db:create && #{import_cmd(unzip_file)}"
-      @cap.run "cd #{@cap.current_path} && bunzip2 -f #{file} && RAILS_ENV=#{@cap.rails_env} && #{import_cmd(unzip_file)}"
+      command = "cd #{@cap.current_path} && bunzip2 -f #{file} && RAILS_ENV=#{@cap.rails_env} && #{import_cmd(unzip_file)}"
+      @cap.run command do |ch, stream, data|
+        if data =~ /Password/
+          ch.send_data("#{pg_pass}\n")
+        end
+      end
+      
       @cap.run("cd #{@cap.current_path} && rm #{unzip_file}") if cleanup
     end
   end
