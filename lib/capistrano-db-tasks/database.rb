@@ -69,7 +69,12 @@ module Database
     end
 
     def dump
-      @cap.run "cd #{@cap.current_path} && #{dump_cmd} | bzip2 - - > #{output_file}"
+      command = "cd #{@cap.current_path} && #{dump_cmd} | bzip2 - - > #{output_file}"
+      @cap.run command do |ch, stream, data|
+        if data =~ /Password/
+          ch.send_data("#{pg_pass}\n")
+        end
+      end
       self
     end
 
